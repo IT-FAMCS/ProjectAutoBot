@@ -15,35 +15,39 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = 'Users'
+
+    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    username: Mapped[str] = mapped_column(String(50))
+
+
 class Admin(Base):
     __tablename__ = 'Admins'
 
-    id = mapped_column(BigInteger, primary_key=True)
-    tg_id = mapped_column(String)
-    name = mapped_column(String)
+    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
 
 
 class Budget_admin(Base):
     __tablename__ = 'Budget_admins'
 
-    id = mapped_column(BigInteger, primary_key=True)
-    tg_id = mapped_column(String)
-    name = mapped_column(String)
+    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
 
 
 class Release_admin(Base):
     __tablename__ = 'Release_admins'
 
-    name: Mapped[str] = mapped_column(String(50))
     tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
 
 
 class Locker_admin(Base):
     __tablename__ = 'Locker_admins'
 
-    id = mapped_column(BigInteger, primary_key=True)
-    tg_id = mapped_column(String)
-    name = mapped_column(String)
+    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
 
 
 async def async_main():

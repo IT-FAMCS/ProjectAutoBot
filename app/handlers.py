@@ -12,9 +12,24 @@ import app.database.request as rq
 router = Router()
 
 
-class Responsible(StatesGroup):
+class Admin(StatesGroup):
     fio = State()
-    tg_id = State()
+    username = State()
+
+
+class Responsible_release(StatesGroup):
+    fio = State()
+    username = State()
+
+
+class Responsible_budget(StatesGroup):
+    fio = State()
+    username = State()
+
+
+class Responsible_locker(StatesGroup):
+    fio = State()
+    username = State()
 
 
 class Release(StatesGroup):
@@ -58,11 +73,37 @@ class Locker_get(StatesGroup):
 @router.message(CommandStart())
 async def start(message: Message):
     await message.answer('Добро пожаловать в бот запросов', reply_markup=kb.start)
+    await rq.set_user(message.from_user.id, message.from_user.username)
+
+
+@router.message(Command('admin'))
+async def admin(message: Message, state: FSMContext):
+    if message.from_user.id == 802188377:
+        await message.answer('Введите ФИО админа')
+        await state.set_state(Admin.fio)
+
+
+@router.message(Admin.fio)
+async def admin_username(message: Message, state: FSMContext):
+    await state.update_data(fio=message.text)
+    await state.set_state(Admin.username)
+    await message.answer('Введите тег админа')
+
+
+@router.message(Admin.username)
+async def admin_final(message: Message, state: FSMContext):
+    await state.update_data(username=message.text.split('@')[1])
+    data = await state.get_data()
+    user_tg_id = await rq.find_user(data["username"])
+    await message.answer('Админ создан', reply_markup=kb.to_main)
+    await rq.set_admin(data["fio"], user_tg_id)
+    await state.clear()
 
 
 @router.message(Command('create'))
 async def creat(message: Message):
-    if message.from_user.id == 802188377:
+    admins = await rq.get_admins()
+    if message.from_user.id in admins:
         await message.answer('Кого вы хотите создать?', reply_markup=kb.create)
     else:
         await message.answer('У вас нет доступа')
@@ -71,24 +112,72 @@ async def creat(message: Message):
 @router.callback_query(F.data == 'a_release')
 async def a_release(callback: CallbackQuery, state: FSMContext):
     await callback.answer('Вы выбрали создание ответсвенного за освобождение')
-    await state.set_state(Responsible.fio)
+    await state.set_state(Responsible_release.fio)
     await callback.message.answer('Введите ФИО ответственного')
 
 
-@router.message(Responsible.fio)
+@router.message(Responsible_release.fio)
 async def tg_id_release(message: Message, state: FSMContext):
     await state.update_data(fio=message.text)
-    await state.set_state(Responsible.tg_id)
-    await message.answer('Введите tg_id ответственного')
+    await state.set_state(Responsible_release.username)
+    await message.answer('Введите тег ответственного')
 
 
-@router.message(Responsible.tg_id)
+@router.message(Responsible_release.username)
 async def release_final(message: Message, state: FSMContext):
-    await state.update_data(tg_id=message.text)
+    await state.update_data(username=message.text.split('@')[1])
     data = await state.get_data()
-    # await message.answer(f'ФИО: {data["fio"]}\nTg_id: {data["tg_id"]}', reply_markup=kb.accept)
+    user_tg_id = await rq.find_user(data["username"])
     await message.answer('Отвественный создан', reply_markup=kb.to_main)
-    await rq.set_release_admin(data["fio"], int(data["tg_id"]))
+    await rq.set_release_admin(data["fio"], user_tg_id)
+    await state.clear()
+
+
+@router.callback_query(F.data == 'a_budget')
+async def a_budget(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('Вы выбрали создание ответственного за бюджет')
+    await state.set_state(Responsible_budget.fio)
+    await callback.message.answer('Введите ФИО ответственного')
+
+
+@router.message(Responsible_budget.fio)
+async def tg_id_budget(message: Message, state: FSMContext):
+    await state.update_data(fio=message.text)
+    await state.set_state(Responsible_budget.username)
+    await message.answer('Введите тег ответственного')
+
+
+@router.message(Responsible_budget.username)
+async def budget_final(message: Message, state: FSMContext):
+    await state.update_data(username=message.text.split('@')[1])
+    data = await state.get_data()
+    user_tg_id = await rq.find_user(data["username"])
+    await message.answer('Отвественный создан', reply_markup=kb.to_main)
+    await rq.set_budget_admin(data["fio"], user_tg_id)
+    await state.clear()
+
+
+@router.callback_query(F.data == 'a_locker')
+async def a_locker(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('Вы выбрали создание ответственного за шкафчик')
+    await state.set_state(Responsible_locker.fio)
+    await callback.message.answer('Введите ФИО ответственного')
+
+
+@router.message(Responsible_locker.fio)
+async def tg_id_locker(message: Message, state: FSMContext):
+    await state.update_data(fio=message.text)
+    await state.set_state(Responsible_locker.username)
+    await message.answer('Введите тег ответственного')
+
+
+@router.message(Responsible_locker.username)
+async def locker_final(message: Message, state: FSMContext):
+    await state.update_data(username=message.text.split('@')[1])
+    data = await state.get_data()
+    user_tg_id = await rq.find_user(data["username"])
+    await message.answer('Отвественный создан', reply_markup=kb.to_main)
+    await rq.set_locker_admin(data["fio"], user_tg_id)
     await state.clear()
 
 
