@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, String, ForeignKey
+from sqlalchemy import BigInteger, String, ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
@@ -45,6 +45,22 @@ class Release_admin(Base):
 
 class Locker_admin(Base):
     __tablename__ = 'Locker_admins'
+
+    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50))
+
+
+class Request(Base):
+    __tablename__ = 'Requests'
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(String(500))
+    accepted: Mapped[str] = mapped_column(String, default="False")
+
+
+class Secretary(Base):
+    __tablename__ = 'Secretaries'
 
     tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String(50))
