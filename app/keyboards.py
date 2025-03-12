@@ -6,7 +6,7 @@ start = ReplyKeyboardMarkup(
 
 
 request = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-    text='Запросить освобождение', callback_data='release'), InlineKeyboardButton(text='Бюджет', callback_data='to_budget'), InlineKeyboardButton(text='Шкафчик', callback_data='to_locker')],
+    text='Запросить освобождение', callback_data='release'), InlineKeyboardButton(text='Бюджет', callback_data='to_budget')],
     [InlineKeyboardButton(text='Создатели', callback_data="creators"), InlineKeyboardButton(text='На главную', callback_data='to_main')]])
 
 
@@ -22,8 +22,6 @@ budget = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='За�
     text='Запросить данные о бюджете', callback_data='request_budget')]])
 
 
-locker = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-    text='Положить вещи', callback_data='put'), InlineKeyboardButton(text='Взять вещи', callback_data='take')]])
 
 
 def admin_accept(user_id, id_request):
@@ -51,12 +49,12 @@ def admin_accept_r(user_id, id_request):
 
 
 create = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Освобождение', callback_data='a_release'), InlineKeyboardButton(
-    text='Бюджет', callback_data='a_budget'), InlineKeyboardButton(text='Шкафчик', callback_data='a_locker')],
+    text='Бюджет', callback_data='a_budget')],
     [InlineKeyboardButton(text='Секретарь', callback_data='a_secretary')
      ]])
 
 delete = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Освобождение', callback_data='d_release'), InlineKeyboardButton(
-    text='Бюджет', callback_data='d_budget'), InlineKeyboardButton(text='Шкафчик', callback_data='d_locker')],
+    text='Бюджет', callback_data='d_budget')],
     [InlineKeyboardButton(text='Секретарь', callback_data='d_secretary')
      ]])
 
@@ -81,16 +79,5 @@ accept_budget = InlineKeyboardMarkup(inline_keyboard=[
 
 accept_budget_date = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Принять", callback_data="accept_budget_date")],
-    [InlineKeyboardButton(text="На главную", callback_data="to_main")]
-])
-
-
-accept_locker_take = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Принять", callback_data="accept_locker_take")],
-    [InlineKeyboardButton(text="На главную", callback_data="to_main")]
-])
-
-accept_locker_put = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Принять", callback_data="accept_locker_put")],
     [InlineKeyboardButton(text="На главную", callback_data="to_main")]
 ])

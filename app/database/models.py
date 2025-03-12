@@ -43,12 +43,6 @@ class Release_admin(Base):
     name: Mapped[str] = mapped_column(String(50))
 
 
-class Locker_admin(Base):
-    __tablename__ = 'Locker_admins'
-
-    tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    name: Mapped[str] = mapped_column(String(50))
-
 
 class Request(Base):
     __tablename__ = 'Requests'

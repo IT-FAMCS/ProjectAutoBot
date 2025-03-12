@@ -27,11 +27,6 @@ class Responsible_budget(StatesGroup):
     username = State()
 
 
-class Responsible_locker(StatesGroup):
-    fio = State()
-    username = State()
-
-
 class Secretary(StatesGroup):
     fio = State()
     username = State()
@@ -44,9 +39,6 @@ class Responsible_release_delete(StatesGroup):
 class Responsible_budget_delete(StatesGroup):
     username = State()
 
-
-class Responsible_locker_delete(StatesGroup):
-    username = State()
 
 
 class Secretary_delete(StatesGroup):
@@ -79,20 +71,6 @@ class Request_Budget(StatesGroup):
     username = State()
     fio = State()
     date = State()
-
-
-class Locker_put(StatesGroup):
-    username = State()
-    fio = State()
-    item = State()
-    description = State()
-
-
-class Locker_get(StatesGroup):
-    username = State()
-    fio = State()
-    item = State()
-    description = State()
 
 
 @router.message(CommandStart())
@@ -182,30 +160,6 @@ async def budget_final(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.callback_query(F.data == 'a_locker')
-async def a_locker(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали создание ответственного за шкафчик')
-    await state.set_state(Responsible_locker.fio)
-    await callback.message.answer('Введите ФИО ответственного')
-
-
-@router.message(Responsible_locker.fio)
-async def tg_id_locker(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Responsible_locker.username)
-    await message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_locker.username)
-async def locker_final(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.split('@')[1])
-    data = await state.get_data()
-    user_tg_id = await rq.find_user(data["username"])
-    await message.answer('Отвественный создан', reply_markup=kb.to_main)
-    await rq.set_locker_admin(data["fio"], user_tg_id)
-    await state.clear()
-
-
 @router.callback_query(F.data == 'a_secretary')
 async def a_secretary(callback: CallbackQuery, state: FSMContext):
     await callback.answer('Вы выбрали создание секретаря')
@@ -270,21 +224,6 @@ async def budget_delete_final(message: Message, state: FSMContext):
     await message.answer('Отвественный удалён', reply_markup=kb.to_main)
     await state.clear()
 
-
-@router.callback_query(F.data == 'd_locker')
-async def d_locker(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали удаление ответственного за шкафчик')
-    await state.set_state(Responsible_locker_delete.username)
-    await callback.message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_locker_delete.username)
-async def locker_delete_final(message: Message, state: FSMContext):
-    username = message.text.split('@')[1]
-    user_tg_id = await rq.find_user(username)
-    await rq.delete_locker_admin(user_tg_id)
-    await message.answer('Отвественный удалён', reply_markup=kb.to_main)
-    await state.clear()
 
 
 @router.callback_query(F.data == 'd_secretary')
@@ -445,75 +384,6 @@ async def date_budget(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.callback_query(F.data == 'to_locker')
-async def locker(callback: CallbackQuery):
-    await callback.answer('Вы перемещены к шкафчику')
-    await callback.message.answer('Что вы хотите?', reply_markup=kb.locker)
-
-
-@router.callback_query(F.data == 'put')
-async def put(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали запрос на сдачу вещей')
-    await state.set_state(Locker_put.fio)
-    await callback.message.answer('Введите своё ФИО')
-
-
-@router.message(Locker_put.fio)
-async def fio_locker(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Locker_put.item)
-    await message.answer('Введите название предмета')
-
-
-@router.message(Locker_put.item)
-async def item_locker(message: Message, state: FSMContext):
-    await state.update_data(item=message.text)
-    await state.set_state(Locker_put.username)
-    await state.update_data(username=message.from_user.username)
-    await state.set_state(Locker_put.description)
-    await message.answer('Введите описание предмета')
-
-
-@router.message(Locker_put.description)
-async def description_locker(message: Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    data = await state.get_data()
-    await message.answer(f'Ваш запрос на отдачу вещей:\nФИО: {data['fio']}\nВаш тег: @{data['username']}\nПредмет: {data['item']}\nОписание: {data['description']}',
-                         reply_markup=kb.accept_locker_put)
-    await state.clear()
-
-
-@router.callback_query(F.data == 'take')
-async def take(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали запрос на взятие вещей')
-    await state.set_state(Locker_get.fio)
-    await callback.message.answer('Введите своё ФИО')
-
-
-@router.message(Locker_get.fio)
-async def fio_locker(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Locker_get.item)
-    await message.answer('Введите название предмета')
-
-
-@router.message(Locker_get.item)
-async def item_locker(message: Message, state: FSMContext):
-    await state.update_data(item=message.text)
-    await state.set_state(Locker_get.username)
-    await state.update_data(username=message.from_user.username)
-    await state.set_state(Locker_get.description)
-    await message.answer('Введите причину')
-
-
-@router.message(Locker_get.description)
-async def description_locker(message: Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    data = await state.get_data()
-    await message.answer(f'Ваш запрос на взятие вещей:\nФИО: {data['fio']}\nВаш тег: @{data['username']}\nПредмет: {data['item']}\nПричина: {data['description']}',
-                         reply_markup=kb.accept_locker_take)
-    await state.clear()
-
 
 @router.callback_query(F.data == "accept_release")
 async def process_accept_button(callback: CallbackQuery, state: FSMContext):
@@ -556,29 +426,6 @@ async def process_accept_button(callback: CallbackQuery):
     for admin in admins:
         await bot.send_message(admin, data, reply_markup=kb.admin_accept(user_id, id_request))
 
-
-@router.callback_query(F.data == "accept_locker_take")
-async def process_accept_button(callback: CallbackQuery):
-    await callback.answer('Ваш запрос принят')
-    user_id = callback.message.chat.id
-    data = callback.message.text
-    await rq.set_request(data)
-    id_request = await rq.get_request_id(data)
-    admins = await rq.get_locker_admins()
-    for admin in admins:
-        await bot.send_message(admin, data, reply_markup=kb.admin_accept(user_id, id_request))
-
-
-@router.callback_query(F.data == "accept_locker_put")
-async def process_accept_button(callback: CallbackQuery):
-    await callback.answer('Ваш запрос принят')
-    user_id = callback.message.chat.id
-    data = callback.message.text
-    await rq.set_request(data)
-    id_request = await rq.get_request_id(data)
-    admins = await rq.get_locker_admins()
-    for admin in admins:
-        await bot.send_message(admin, data, reply_markup=kb.admin_accept(user_id, id_request))
 
 
 @router.callback_query(F.data.contains('accept_admin_r'))

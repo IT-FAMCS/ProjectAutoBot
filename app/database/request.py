@@ -1,5 +1,5 @@
 from app.database.models import async_session
-from app.database.models import Admin, Budget_admin, Release_admin, Locker_admin, User, Request, Secretary
+from app.database.models import Admin, Budget_admin, Release_admin, User, Request, Secretary
 from sqlalchemy import select
 
 
@@ -39,15 +39,6 @@ async def set_budget_admin(fio, tg_id):
             await session.commit()
 
 
-async def set_locker_admin(fio, tg_id):
-    async with async_session() as session:
-        name = await session.scalar(select(Locker_admin).where(Locker_admin.name == fio))
-        id = await session.scalar(select(Locker_admin).where(Locker_admin.tg_id == tg_id))
-        if not name and not id:
-            session.add(Locker_admin(tg_id=tg_id, name=fio))
-            await session.commit()
-
-
 async def set_secretary(fio, tg_id):
     async with async_session() as session:
         name = await session.scalar(select(Secretary).where(Secretary.name == fio))
@@ -78,12 +69,6 @@ async def get_release_admins():
 async def get_budget_admins():
     async with async_session() as session:
         result = await session.execute(select(Budget_admin.tg_id))
-        return [row[0] for row in result.all()]
-
-
-async def get_locker_admins():
-    async with async_session() as session:
-        result = await session.execute(select(Locker_admin.tg_id))
         return [row[0] for row in result.all()]
 
 
@@ -130,12 +115,5 @@ async def delete_release_admin(tg_id):
 async def delete_budget_admin(tg_id):
     async with async_session() as session:
         admin = await session.scalar(select(Budget_admin).where(Budget_admin.tg_id == tg_id))
-        await session.delete(admin)
-        await session.commit()
-
-
-async def delete_locker_admin(tg_id):
-    async with async_session() as session:
-        admin = await session.scalar(select(Locker_admin).where(Locker_admin.tg_id == tg_id))
         await session.delete(admin)
         await session.commit()
