@@ -261,7 +261,7 @@ async def creators(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'release')
 async def release(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали запрос на освобождение', reply_markup=kb.to_main)
+    await callback.answer('')
     await callback.message.answer('Напишите своё ФИО')
     await state.set_state(Release.fio)
 

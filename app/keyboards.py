@@ -66,8 +66,8 @@ delete = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Ос�
 #     ])
 #     return markup
 
-accept_release = InlineKeyboardMarkup(inline_keyboard=[[
-    InlineKeyboardButton(text="Принять", callback_data="accept_release")],
+accept_release = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Принять", callback_data="accept_release")],
     [InlineKeyboardButton(text="На главную", callback_data="to_main")]
 ])
 
