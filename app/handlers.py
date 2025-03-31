@@ -1,470 +1,377 @@
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.media_group import MediaGroupBuilder
-
+import re
 import app.keyboards as kb
 from bot import bot
 import app.database.request as rq
-
+import app.middlewares as mw
+from typing import List
 router = Router()
+router.message.middleware(mw.MediaGroupMiddleware())
+#state классы
 
-
-class Admin(StatesGroup):
+class UserReg(StatesGroup):
     fio = State()
     username = State()
 
-
-class Responsible_release(StatesGroup):
-    fio = State()
-    username = State()
-
-
-class Responsible_budget(StatesGroup):
-    fio = State()
-    username = State()
-
-
-class Secretary(StatesGroup):
-    fio = State()
-    username = State()
-
-
-class Responsible_release_delete(StatesGroup):
-    username = State()
-
-
-class Responsible_budget_delete(StatesGroup):
-    username = State()
-
-
-
-class Secretary_delete(StatesGroup):
-    username = State()
-
-
-class Release_text(StatesGroup):
-    text = State()
-
-
-class Release(StatesGroup):
-    username = State()
+class ExemptionReg(StatesGroup):
     fio = State()
     course = State()
     group = State()
     date = State()
     reason = State()
 
+class RepaymentReg(StatesGroup):
+    items = State()
+    gurantor = State()
+    expenses = State()
+    requisites = State()
+    photos = State()
 
-class Return_Budget(StatesGroup):
+class UserDel(StatesGroup):
     username = State()
-    fio = State()
-    reason = State()
-    quantity = State()
-    send = State()
-    album = State()
-
-
-class Request_Budget(StatesGroup):
-    username = State()
-    fio = State()
-    date = State()
-
+#хендлеры меню
 
 @router.message(CommandStart())
 async def start(message: Message):
-    await message.answer('Добро пожаловать в бот запросов', reply_markup=kb.start)
+    await message.answer('Добро пожаловать в бот запросов!', reply_markup=await kb.main_keyboard(message.from_user.id))
     await rq.set_user(message.from_user.id, message.from_user.username)
 
+@router.message(Command("main"))
+async def main_menu(message: Message):
+    await message.answer('Главное меню', reply_markup= await kb.main_keyboard(message.from_user.id))
 
-@router.message(Command('admin'))
-async def admin(message: Message, state: FSMContext):
-    if message.from_user.id == 802188377:
-        await message.answer('Введите ФИО админа')
-        await state.set_state(Admin.fio)
-
-
-@router.message(Admin.fio)
-async def admin_username(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Admin.username)
-    await message.answer('Введите тег админа')
-
-
-@router.message(Admin.username)
-async def admin_final(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.split('@')[1])
-    data = await state.get_data()
-    user_tg_id = await rq.find_user(data["username"])
-    await message.answer('Админ создан', reply_markup=kb.to_main)
-    await rq.set_admin(data["fio"], user_tg_id)
-    await state.clear()
-
-
-@router.message(Command('create'))
-async def creat(message: Message):
-    admins = await rq.get_admins()
-    if message.from_user.id in admins:
-        await message.answer('Кого вы хотите создать?', reply_markup=kb.create)
-    else:
-        await message.answer('У вас нет доступа')
-
-
-@router.callback_query(F.data == 'a_release')
-async def a_release(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали создание ответсвенного за освобождение')
-    await state.set_state(Responsible_release.fio)
-    await callback.message.answer('Введите ФИО ответственного')
-
-
-@router.message(Responsible_release.fio)
-async def tg_id_release(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Responsible_release.username)
-    await message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_release.username)
-async def release_final(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.split('@')[1])
-    data = await state.get_data()
-    user_tg_id = await rq.find_user(data["username"])
-    await message.answer('Отвественный создан', reply_markup=kb.to_main)
-    await rq.set_release_admin(data["fio"], user_tg_id)
-    await state.clear()
-
-
-@router.callback_query(F.data == 'a_budget')
-async def a_budget(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали создание ответственного за бюджет')
-    await state.set_state(Responsible_budget.fio)
-    await callback.message.answer('Введите ФИО ответственного')
-
-
-@router.message(Responsible_budget.fio)
-async def tg_id_budget(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Responsible_budget.username)
-    await message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_budget.username)
-async def budget_final(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.split('@')[1])
-    data = await state.get_data()
-    user_tg_id = await rq.find_user(data["username"])
-    await message.answer('Отвественный создан', reply_markup=kb.to_main)
-    await rq.set_budget_admin(data["fio"], user_tg_id)
-    await state.clear()
-
-
-@router.callback_query(F.data == 'a_secretary')
-async def a_secretary(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали создание секретаря')
-    await state.set_state(Secretary.fio)
-    await callback.message.answer('Введите ФИО секретаря')
-
-
-@router.message(Secretary.fio)
-async def tg_id_secretary(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Secretary.username)
-    await message.answer('Введите тег секретаря')
-
-
-@router.message(Secretary.username)
-async def secretary_final(message: Message, state: FSMContext):
-    await state.update_data(username=message.text.split('@')[1])
-    data = await state.get_data()
-    user_tg_id = await rq.find_user(data["username"])
-    await message.answer('Секретарь создан', reply_markup=kb.to_main)
-    await rq.set_secretary(data["fio"], user_tg_id)
-    await state.clear()
-
-
-@router.message(Command('delete'))
-async def delete(message: Message):
-    admins = await rq.get_admins()
-    if message.from_user.id in admins:
-        await message.answer('Кого вы хотите удалить?', reply_markup=kb.delete)
-    else:
-        await message.answer('У вас нет доступа')
-
-
-@router.callback_query(F.data == 'd_release')
-async def d_release(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали удаление ответсвенного за освобождение')
-    await state.set_state(Responsible_release_delete.username)
-    await callback.message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_release_delete.username)
-async def release_delete_final(message: Message, state: FSMContext):
-    username = message.text.split('@')[1]
-    user_tg_id = await rq.find_user(username)
-    await rq.delete_release_admin(user_tg_id)
-    await message.answer('Отвественный удалён', reply_markup=kb.to_main)
-    await state.clear()
-
-
-@router.callback_query(F.data == 'd_budget')
-async def d_budget(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали удаление ответственного за бюджет')
-    await state.set_state(Responsible_budget_delete.username)
-    await callback.message.answer('Введите тег ответственного')
-
-
-@router.message(Responsible_budget_delete.username)
-async def budget_delete_final(message: Message, state: FSMContext):
-    username = message.text.split('@')[1]
-    user_tg_id = await rq.find_user(username)
-    await rq.delete_budget_admin(user_tg_id)
-    await message.answer('Отвественный удалён', reply_markup=kb.to_main)
-    await state.clear()
-
-
-
-@router.callback_query(F.data == 'd_secretary')
-async def d_secretary(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали удаление секретаря')
-    await state.set_state(Secretary_delete.username)
-    await callback.message.answer('Введите тег секретаря')
-
-
-@router.message(Secretary_delete.username)
-async def secretary_delete_final(message: Message, state: FSMContext):
-    username = message.text.split('@')[1]
-    user_tg_id = await rq.find_user(username)
-    await rq.delete_secretary(user_tg_id)
-    await message.answer('Секретарь удалён', reply_markup=kb.to_main)
-    await state.clear()
-
-
-@router.message(F.text == 'На главную')
-async def main_2(message: Message):
-    await message.answer('Выберете запрос', reply_markup=kb.request)
-
-
-@router.callback_query(F.data == 'to_main')
-async def main(callback: CallbackQuery):
-    await callback.answer('Вы перемещены на главную страницу')
-    await callback.message.answer('Выберете запрос', reply_markup=kb.request)
-
-
-@router.callback_query(F.data == 'creators')
-async def creators(callback: CallbackQuery):
-    await callback.answer('Создатели бота')
-    await callback.message.answer('Создатели бота', reply_markup=kb.creators)
-
-
-@router.callback_query(F.data == 'release')
-async def release(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data == "budget_menu")
+async def budget_menu(callback: CallbackQuery):
     await callback.answer('')
-    await callback.message.answer('Напишите своё ФИО')
-    await state.set_state(Release.fio)
+    await callback.message.edit_text("Меню бюджета", reply_markup=kb.budget_menu)
+
+@router.callback_query(F.data == "admin_panel")
+async def admin_panel(callback: CallbackQuery):
+    await callback.answer('')
+    await callback.message.edit_text("Админ панель :smiling_imp:", reply_markup=kb.admin_panel)
 
 
-@router.message(Release.fio)
-async def course(message: Message, state: FSMContext):
+#хендлеры админ панели
+
+@router.callback_query(F.data == "set_exemption_admin")
+async def set_exemption_admin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserReg.fio)
+    await state.update_data(admin_type="exemption")
+    await callback.message.edit_text("Вы выбрали добавление ответсвенного за освобождения")
+    await callback.message.answer("Отправьте ФИО ответсвенного")
+
+@router.callback_query(F.data == "set_budget_admin")
+async def set_budget_admin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserReg.fio)
+    await state.update_data(admin_type="budget")
+    await callback.message.edit_text("Вы выбрали добавление ответсвенного за бюджет")
+    await callback.message.answer("Отправьте ФИО ответсвенного")
+
+@router.callback_query(F.data == "set_secretary")
+async def set_secretary(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserReg.fio)
+    await state.update_data(admin_type="secretary")
+    await callback.message.edit_text("Вы выбрали добавление секретаря")
+    await callback.message.answer("Отправьте ФИО ответсвенного")
+
+@router.message(UserReg.fio)
+async def admin_fio(message: Message, state: FSMContext):
     await state.update_data(fio=message.text)
-    await state.set_state(Release.course)
+    await state.set_state(UserReg.username)
+    await message.answer('Отправьте тег ответственного')
+
+@router.message(UserReg.username)
+async def admin_username(message: Message, state: FSMContext):
+    data = await state.get_data()
+    admin_id = await rq.find_user(username = message.text.split('@')[1])
+    if admin_id == None:
+        await message.answer("Кажется, что пользователь не запускал бота. Попросите его запустить бота и попробуйте ещё раз")
+        await state.clear()
+        return
+    if data["admin_type"] == "exemption":
+        exemption_admins = await rq.get_exemption_admins()
+        if admin_id in exemption_admins:
+            await message.answer("Человек, которого вы пытаетесь добавить, уже является ответсвенным за освобождения")
+            await state.clear()
+            return  
+        rq.set_exemption_admin(fio = data["fio"], tg_id=admin_id)
+        await message.answer("Вы добавили нового ответственного за освобождения")
+        await state.clear()
+        return
+    
+    if data["admin_type"] == "budget":
+        secretaries = await rq.get_budget_admins()
+        if admin_id in secretaries:
+            message.answer("Человек, которого вы пытаетесь добавить, уже является ответсвенным за бюджет")
+            await state.clear()
+            return  
+        rq.set_budget_admin(fio = data["fio"], tg_id=admin_id)
+        await message.answer("Вы добавили нового ответственного за бюджет")
+        await state.clear()
+        return
+    
+    if data["admin_type"] == "secretary":
+        secretaries = await rq.get_secretaries()
+        if admin_id in secretaries:
+            message.answer("Человек, которого вы пытаетесь добавить, уже является секретарём")
+            await state.clear()
+            return  
+        rq.set_secretary(fio = data["fio"], tg_id=admin_id)
+        await message.answer("Вы добавили нового секретаря")
+        await state.clear()
+        return
+
+@router.callback_query(F.data == "delete_exemption_admin")
+async def set_exemption_admin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserDel.username)
+    await state.update_data(admin_type="exemption")
+    await callback.message.edit_text("Вы выбрали удаление ответсвенного за освобождения")
+    await callback.message.answer("Отправьте юзернейм ответсвенного за освобождения")
+
+@router.callback_query(F.data == "delete_budget_admin")
+async def set_exemption_admin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserDel.username)
+    await state.update_data(admin_type="budget")
+    await callback.message.edit_text("Вы выбрали удаление ответсвенного за бюджет")
+    await callback.message.answer("Отправьте юзернейм ответсвенного за бюджет")
+
+@router.callback_query(F.data == "delete_secretary")
+async def set_exemption_admin(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await state.set_state(UserDel.username)
+    await state.update_data(admin_type="secretary")
+    await callback.message.edit_text("Вы выбрали удаление секретаря")
+    await callback.message.answer("Отправьте юзернейм секретаря")
+
+@router.message(UserDel.username)
+async def admin_username(message: Message, state: FSMContext):
+    data = await state.get_data()
+    admin_id = await rq.find_user(username = message.text.split('@')[1])
+    if admin_id == None:
+        await message.answer("Этот пользователь не использует бота. Вероятнее всего, вы ошиблись")
+        await state.clear()
+        return
+    if data["admin_type"] == "exemption":
+        exemption_admins = await rq.get_exemption_admins()
+        if admin_id not in exemption_admins:
+            await message.answer("Данный пользователем не является ответственным за освобождения")
+            await state.clear()
+            return  
+        rq.delete_exemption_admin(admin_id)
+        await message.answer("Вы удалили ответственного за освобождения")
+        await state.clear()
+        return
+    
+    if data["admin_type"] == "budget":
+        secretaries = await rq.get_budget_admins()
+        if admin_id in secretaries:
+            message.answer("Данный пользователем не является ответственным за бюджет")
+            await state.clear()
+            return  
+        rq.delete_budget_admin(admin_id)
+        await message.answer("Вы удалили ответственного за бюджет")
+        await state.clear()
+        return
+    
+    if data["admin_type"] == "secretary":
+        secretaries = await rq.get_secretaries()
+        if admin_id in secretaries:
+            message.answer("Данный пользователем не является секретарём")
+            await state.clear()
+            return  
+        rq.delete_secretary(admin_id)
+        await message.answer("Вы удалили секретаря")
+        await state.clear()
+        return
+
+
+#хендлеры запроса освободоса
+
+@router.callback_query(F.data == "exemption_request")
+async def exemption_request(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await callback.message.edit_text('Вы выбрали запрос на освобождение')
+    await callback.message.answer('Напишите своё ФИО')
+    await state.set_state(ExemptionReg.fio)
+    
+@router.message(ExemptionReg.fio)
+async def fio(message: Message, state: FSMContext):
+    await state.update_data(fio=message.text)
+    await state.set_state(ExemptionReg.course)
     await message.answer('Напишите свой курс')
 
-
-@router.message(Release.course)
-async def group(message: Message, state: FSMContext):
+@router.message(ExemptionReg.course)
+async def course(message: Message, state: FSMContext):
     await state.update_data(course=message.text)
-    await state.set_state(Release.group)
+    await state.set_state(ExemptionReg.group)
     await message.answer('Напишите свою группу')
 
-
-@router.message(Release.group)
+@router.message(ExemptionReg.group)
 async def group(message: Message, state: FSMContext):
     await state.update_data(group=message.text)
-    await state.set_state(Release.date)
+    await state.set_state(ExemptionReg.date)
     await message.answer('Напишите дату и время')
 
-
-@router.message(Release.date)
+@router.message(ExemptionReg.date)
 async def date(message: Message, state: FSMContext):
     await state.update_data(date=message.text)
-    await state.set_state(Release.username)
-    await state.update_data(username=message.from_user.username)
-    await state.set_state(Release.reason)
+    await state.set_state(ExemptionReg.reason)
     await message.answer('Напишите причину')
 
-
-@router.message(Release.reason)
+@router.message(ExemptionReg.reason)
 async def reason(message: Message, state: FSMContext):
     data = await state.get_data()
-    tg_id = message.from_user.id
-    await message.answer(f'Ваш запрос на освобождение:\nФИО: {data["fio"]}\nВаш тег: @{data['username']}\nКурс: {data["course"]}\nГруппа: {data["group"]}\nДата и время: {data["date"]}\nПричина: {message.text}',
-                         reply_markup=kb.accept_release)
+    username = message.from_user.username
+    await message.answer(f'Ваш запрос на освобождение:\nФИО: {data["fio"]}\nВаш тег: @{username}\nКурс: {data["course"]}\nГруппа: {data["group"]}\nДата и время: {data["date"]}\nПричина: {message.text}',
+                         reply_markup=kb.user_confirm_exemption)
+
+@router.callback_query(F.data == 'user_confirmed_exemption')
+async def user_confirmed_exemption(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    request_data = 'З'+ callback.message.text[5:]
+    data = await state.get_data()
+    request_date = data["date"]
+    user_id = callback.message.chat.id
+    await callback.message.edit_text(f'Ваш запрос на {request_date} принят на рассмотрение.')
+    await callback.message.answer('Главное меню', reply_markup= await kb.main_keyboard(user_id))
     await state.clear()
+    await rq.set_request(text=request_data, tg_id=user_id)
+    request_id = await rq.get_request_id(request_data)
+    admins = await rq.get_exemption_admins()
+    for admin in admins:
+        await bot.send_message(admin, request_data, reply_markup=kb.admin_handle_request(request_id))
+        
+@router.callback_query(F.data == "user_cancel_exemption")
+async def user_cancel_exemption(callback: CallbackQuery, state: FSMContext):
+    state.clear()
+    await callback.message.edit_text('Вы отменили запрос')
+    await callback.message.answer('Главное меню', reply_markup= await kb.main_keyboard(callback.message.chat.id))
 
+#хендлеры запроса возврата средств
 
-@router.callback_query(F.data == 'to_budget')
-async def budget(callback: CallbackQuery):
-    await callback.answer('Вы перемещены к бюджету')
-    await callback.message.answer(text='Что бы вы хотели?', reply_markup=kb.budget)
+@router.callback_query(F.data == "repayment_request")
+async def repayment_request(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    await callback.message.edit_text('Вы выбрали запрос возврата средств')
+    await callback.message.answer('Напишите, что было куплено')
+    await state.set_state(RepaymentReg.items)
 
+@router.message(RepaymentReg.items)
+async def items(message: Message, state: FSMContext):
+    await state.update_data(items=message.text)
+    await state.set_state(RepaymentReg.gurantor)
+    await message.answer('Напишите поручителя. Если поручителя нету, оставьте -')
+    
+@router.message(RepaymentReg.gurantor)
+async def gurantor(message: Message, state: FSMContext):
+    await state.update_data(gurantor=message.text)
+    await state.set_state(RepaymentReg.requisites)
+    await message.answer('Отправьте реквизиты (номер карты, реквизиты для пополнения через ЕРИП)')
 
-@router.callback_query(F.data == 'return_budget')
-async def return_budget(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали запрос на возврат денег')
-    await state.set_state(Return_Budget.fio)
-    await callback.message.answer('Введите своё ФИО')
-
-
-@router.message(Return_Budget.fio)
-async def fio_budget(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Return_Budget.reason)
-    await message.answer('Напишите причину')
-
-
-@router.message(Return_Budget.reason)
-async def reason_budget(message: Message, state: FSMContext):
-    await state.update_data(reason=message.text)
-    await state.set_state(Return_Budget.quantity)
-    await message.answer('Напишите количество денег для возвращения')
-
-
-@router.message(Return_Budget.quantity)
-async def quantity_budget(message: Message, state: FSMContext):
-    await state.update_data(quantity=message.text)
-    await state.set_state(Return_Budget.send)
-    await message.answer('Введите куда прислать(номер карты или ерип с банком)')
-
-
-@router.message(Return_Budget.send)
-async def send_budget(message: Message, state: FSMContext):
-    await state.update_data(send=message.text)
-    await state.set_state(Return_Budget.username)
-    await state.update_data(username=message.from_user.username)
-    await state.set_state(Return_Budget.album)
-    await message.answer('Пришлите фото чека(только одно)')
-
-
-@router.message(Return_Budget.album)
-async def photo_budget(message: Message, state: FSMContext):
-    if not message.photo:
-        await message.answer('Пожалуйста, пришлите фото чека.')
+@router.message(RepaymentReg.requisites)
+async def requeisites(message: Message, state: FSMContext):
+    await state.update_data(requisites=message.text)
+    await state.set_state(RepaymentReg.photos)
+    await message.answer('Отправьте фото чеков')
+    
+@router.message(RepaymentReg.photos)
+async def gurantor(message: Message, state: FSMContext, album: List[Message] = []):
+    #как же уёбищно тг обрабатывает альбомы, это просто невыносимо, я в шоке, что такое вообще сделали. я просто в ахуе
+    if len(album) == 0:
+        await message.answer("Вы не отправили фотографии. Отправьте фотографии")
         return
+    for element in album:
+        if not element.photo:
+            await message.answer("Вы отправили что-то, но не фото (возможно фото как файл). Отправьте фото как фото")
+            return
+    await state.update_data(album=album)
     data = await state.get_data()
-    photo = message.photo[-1].file_id
-    await state.update_data(album=photo)
-    await message.answer(f'Ваш запрос на возврат:\nФИО: {data["fio"]}\nВаш тег: @{data['username']}\nПричина: {data["reason"]}\nКоличество: {data["quantity"]}\nКуда: {data["send"]}', reply_markup=kb.accept_budget)
-    await message.answer_photo(photo)
-
-
-@router.callback_query(F.data == 'request_budget')
-async def request_budget(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Вы выбрали запрос на данные о бюджете')
-    await state.set_state(Request_Budget.fio)
-    await callback.message.answer('Введите своё ФИО')
-
-
-@router.message(Request_Budget.fio)
-async def fio_budget(message: Message, state: FSMContext):
-    await state.update_data(fio=message.text)
-    await state.set_state(Request_Budget.username)
-    await state.update_data(username=message.from_user.username)
-    await state.set_state(Request_Budget.date)
-    await message.answer('Введите промежуток времени')
-
-
-@router.message(Request_Budget.date)
-async def date_budget(message: Message, state: FSMContext):
-    await state.update_data(date=message.text)
+    username = message.from_user.username
+    await message.answer(f'Ваш запрос на возврат средств:\nВаш тег: @{username}\nПредметы: {data["items"]}\nПоручитель: {data["gurantor"]}\nРеквизиты: {data["requisites"]}', reply_markup=kb.user_confirm_repayment)
+    
+@router.callback_query(F.data == 'user_confirmed_repayment')
+async def user_confirmed_repayment(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    request_data = 'З'+ callback.message.text[5:]
     data = await state.get_data()
-    await message.answer(f'Ваш запрос бюджета:\nФИО: {data['fio']}\nВаш тег: @{data['username']}\nДата: {data['date']}', reply_markup=kb.accept_budget_date)
-    await state.clear()
-
-
-
-@router.callback_query(F.data == "accept_release")
-async def process_accept_button(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Ваш запрос принят')
     user_id = callback.message.chat.id
-    data = callback.message.text
-    await state.set_state(Release_text.text)
-    await state.update_data(text=data)
-    await rq.set_request(data)
-    id_request = await rq.get_request_id(data)
-    admins = await rq.get_release_admins()
+    await callback.message.edit_text(f'Ваш запрос на возврат средств за {data["items"]} принят на рассмотрение.')
+    await callback.message.answer('Главное меню', reply_markup= await kb.main_keyboard(user_id))
+    photo_ids =[]
+    for element in data["album"]:
+        photo_ids.append(element.photo[-1].file_id)
+    
+    await rq.set_request(text=request_data, tg_id=user_id, photo_ids=photo_ids)
+    request_id = await rq.get_request_id(request_data)
+    admins = await rq.get_exemption_admins()
+    group_elements =[InputMediaPhoto(media=photo_ids[0], caption=request_data)]
+    for photo_id in photo_ids[:1]:
+        group_elements.append(InputMediaPhoto(media=photo_id))
+    
     for admin in admins:
-        await bot.send_message(admin, data, reply_markup=kb.admin_accept_r(user_id, id_request))
+            await bot.send_media_group(admin, group_elements)
+            await bot.send_message(f"Запрос на возврат средств за {data["items"]}", reply_markup=kb.admin_handle_request)
+        
+@router.callback_query(F.data == "user_cancel_repayment")
+async def user_cancel_exemption(callback: CallbackQuery, state: FSMContext):
+    state.clear()
+    await callback.message.edit_text('Вы отменили запрос')
+    await callback.message.answer('Главное меню', reply_markup= await kb.main_keyboard(callback.message.chat.id))
 
+#хендлеры одобрения/отказа
 
-@router.callback_query(F.data == "accept_budget")
-async def process_accept_button(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('Ваш запрос принят')
-    user_id = callback.message.chat.id
-    data = callback.message.text
-    dt = await state.get_data()
-    photo = dt['album']
-    await rq.set_request(data)
-    id_request = await rq.get_request_id(data)
-    admins = await rq.get_budget_admins()
-    for admin in admins:
-        await bot.send_message(admin, data, reply_markup=kb.admin_accept(user_id, id_request))
-        await bot.send_photo(admin, photo)
-    await state.clear()
-
-
-@router.callback_query(F.data == "accept_budget_date")
-async def process_accept_button(callback: CallbackQuery):
-    await callback.answer('Ваш запрос принят')
-    user_id = callback.message.chat.id
-    data = callback.message.text
-    await rq.set_request(data)
-    id_request = await rq.get_request_id(data)
-    admins = await rq.get_budget_admins()
-    for admin in admins:
-        await bot.send_message(admin, data, reply_markup=kb.admin_accept(user_id, id_request))
-
-
-
-@router.callback_query(F.data.contains('accept_admin_r'))
-async def accept_admin_r(callback: CallbackQuery, state: FSMContext):
-    rq_id = callback.data.split(':')[2]
-    if await rq.get_request_accepted(rq_id) == "False":
-        await callback.answer('Вы приняли запрос')
-        msg = await state.get_data()
-        user_id = callback.data.split(':')[1]
-        await bot.send_message(user_id, 'Ваш запрос принят', reply_markup=kb.start)
+@router.callback_query(F.data == "approve_request")
+async def approve_request(callback: CallbackQuery):
+    request_id = callback.data.split(':')[1]
+    request_status = await rq.is_request_approved(request_id)
+    await callback.answer('')
+    if await request_status == "Unprocessed":
+        await callback.message.edit_reply_markup()
+        await callback.message.answer('Вы одобрили запрос. Запрос передан в секретариат')
+        user_id = await rq.get_request_tg_id(request_id)
+        request_data = await rq.get_request_data(request_id)
+        if(request_data.startswith("Запрос на освобождение")):
+            request_date = re.search('Дата и время: (.*)\nПричина:', request_data).group(1)
+            await bot.send_message(user_id, f'Ваш запрос на {request_date} одобрен и передан секретарям', reply_markup= await kb.main_keyboard(user_id))
+        else:
+            pass 
+        request_data = "Одобрен з" + request_data[1:]
         secretaries = await rq.get_secretaries()
         for secretary in secretaries:
-            await bot.send_message(secretary, msg['text'])
-        await rq.set_request_accepted(rq_id)
+            await bot.send_message(secretary, request_data)
+        await rq.set_request_approved(request_id)
+    elif request_status == "Approved" or "Declined":
+        await callback.message.edit_text('Запрос уже обработан')
     else:
-        await callback.answer('Запрос уже обработан')
+        await callback.message.edit_text('Обратитесь за поддержкой в IT-отдел')
 
-
-@router.callback_query(F.data.contains('accept_admin'))
-async def accept_admin(callback: CallbackQuery):
-    rq_id = callback.data.split(':')[2]
-    if await rq.get_request_accepted(rq_id) == "False":
-        await callback.answer('Вы приняли запрос')
-
-        user_id = callback.data.split(':')[1]
-        await bot.send_message(user_id, 'Ваш запрос принят', reply_markup=kb.start)
-        await rq.set_request_accepted(rq_id)
+@router.callback_query(F.data == "decline_request")
+async def approve_request(callback: CallbackQuery):
+    request_id = callback.data.split(':')[1]
+    request_status = await rq.is_request_approved(request_id)
+    await callback.answer('')
+    if await request_status == "Unprocessed":
+        await callback.message.edit_reply_markup()
+        await callback.message.answer('Вы отклонили запрос')
+        user_id = await rq.get_request_tg_id(request_id)
+        request_data = await rq.get_request_data(request_id)
+        if(request_data.startswith("Запрос на освобождение")):
+            request_date = re.search('Дата и время: (.*)\nПричина:', request_data).group(1)
+            await bot.send_message(user_id, f'Ваш запрос на {request_date} отказан', reply_markup= await kb.main_keyboard(user_id))
+        else:
+            pass #сюда обработчик бюджета ебнуть надо, но я пока не придумал, как он структурируется
+        await rq.set_request_declined(request_id)
+    elif request_status == "Approved" or "Declined":
+        await callback.message.edit_text('Запрос уже обработан')
     else:
-        await callback.answer('Запрос уже обработан')
-
-
-@router.callback_query(F.data.contains('decline_admin'))
-async def decline_admin(callback: CallbackQuery):
-    rq_id = callback.data.split(':')[2]
-    if await rq.get_request_accepted(rq_id) == "False":
-        await callback.answer('Вы отклонили запрос')
-
-        user_id = callback.data.split(':')[1]
-        await bot.send_message(user_id, 'Ваш запрос отклонён', reply_markup=kb.start)
-        await rq.set_request_accepted(rq_id)
-    else:
-        await callback.answer('Запрос уже обработан')
+        await callback.message.edit_text('Обратитесь за поддержкой в IT-отдел')        
