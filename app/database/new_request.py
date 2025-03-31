@@ -78,11 +78,30 @@ async def get_secretaries():
         return [row[0] for row in result.all()]
 
 
-async def set_request(text):
+
+async def delete_exemption_admin(tg_id):
     async with async_session() as session:
-        session.add(Request(text=text))
+        admin = await session.scalar(select(Exemption_admin).where(Exemption_admin.tg_id == tg_id))
+        await session.delete(admin)
         await session.commit()
 
+async def delete_budget_admin(tg_id):
+    async with async_session() as session:
+        admin = await session.scalar(select(Budget_admin).where(Budget_admin.tg_id == tg_id))
+        await session.delete(admin)
+        await session.commit()
+
+async def delete_secretary(tg_id):
+    async with async_session() as session:
+        admin = await session.scalar(select(Secretary).where(Secretary.tg_id == tg_id))
+        await session.delete(admin)
+        await session.commit()
+
+
+async def set_request(text, tg_id, photo_ids = []):
+    async with async_session() as session:
+        session.add(Request(tg_id = tg_id, text=text, photo_ids = photo_ids))
+        await session.commit()
 
 async def set_request_approved(request_id):
     async with async_session() as session:
@@ -95,7 +114,6 @@ async def set_request_declined(request_id):
         request = await session.scalar(select(Request).where(Request.request_id == request_id))
         request.approved = "Declined"
         await session.commit()
-
 
 async def is_request_approved(request_id):
     async with async_session() as session:
@@ -123,15 +141,3 @@ async def get_request_tg_id(request_id):
             return 0
         return request.tg_id
     
-async def delete_exemption_admin(tg_id):
-    async with async_session() as session:
-        admin = await session.scalar(select(Exemption_admin).where(Exemption_admin.tg_id == tg_id))
-        await session.delete(admin)
-        await session.commit()
-
-
-async def delete_budget_admin(tg_id):
-    async with async_session() as session:
-        admin = await session.scalar(select(Budget_admin).where(Budget_admin.tg_id == tg_id))
-        await session.delete(admin)
-        await session.commit()
